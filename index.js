@@ -1,9 +1,10 @@
-var http = require("http");
+const express = require("express");
+const app = express();
+const mongoose = require("mongoose");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
+const PORT = process.env.PORT || 8080;
+const MONGOURL = process.env.MONGOURL;
+app.use(express.json());
 
-//create a server object:
-http
-  .createServer(function (req, res) {
-    res.write("Hello from CodeSandbox!"); //write a response to the client
-    res.end(); //end the response
-  })
-  .listen(8080); //the server object listens on port 8080
+app.listen(8080, () => console.log("Server is runniing in port 8080"));
