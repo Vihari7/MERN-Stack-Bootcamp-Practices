@@ -5,8 +5,14 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const PORT = process.env.PORT || 8080;
 const MONGOURL = process.env.MONGOURL;
-
+const cors = require("cors");
 app.use(express.json());
+
+app.use(
+  cors({
+    origin: "*",
+  })
+);
 
 mongoose.connect(MONGOURL, {
   useNewUrlParser: true,
@@ -48,11 +54,6 @@ app.post("/login", async (req, res) => {
   res.json({ token });
 });
 
-app.post("/register", async (req, res) => {
-  const token = jwt.sign({ userId: user, _id }, "secret", { expiresIn: "1h" });
-  res.json({ token });
-});
-
 const authMiddleware = (req, res, next) => {
   const token = req.header("Autherization")?.replace("Bearer ", "");
   if (!token) return res.status(401).json({ message: "No token" });
@@ -64,4 +65,45 @@ const authMiddleware = (req, res, next) => {
     res.status(401).json({ message: "Invalide Token" });
   }
 };
-app.listen(PORT, () => console.log("Server is runniing in port: 8080"));
+
+app.get("/tasks", authMiddleware, async (req, res) => {
+  const tasks = await Task.find({ userId: req.userId });
+  res.json(tasks);
+});
+
+app.post("/tasks", authMiddleware, async (req, res) => {
+  const task = new Task({ ...req.body, userId: req.userId });
+  await task.save();
+  res.json(task);
+});
+
+app.delete("/tasks/:id", authMiddleware, async (req, res) => {
+  await Task.findOneAndDelete({ _id: req.params.id, userId: req.userId });
+  res.json({ message: "Task deleted" });
+});
+
+// Update task status
+app.patch("/tasks/:id/status", authMiddleware, async (req, res) => {
+  const { status } = req.body;
+  const task = await Task.findOneAndUpdate(
+    { _id: req.params.id, userId: req.userId },
+    { status },
+    { new: true }
+  );
+  if (!task) return res.status(404).json({ message: "Task not found" });
+  res.json(task);
+});
+
+// Update task priority
+app.patch("/tasks/:id/priority", authMiddleware, async (req, res) => {
+  const { priority } = req.body;
+  const task = await Task.findOneAndUpdate(
+    { _id: req.params.id, userId: req.userId },
+    { priority },
+    { new: true }
+  );
+  if (!task) return res.status(404).json({ message: "Task not found" });
+  res.json(task);
+});
+
+app.listen(PORT, () => console.log("Server is runniing in port ${PORT}"));
